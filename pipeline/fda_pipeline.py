@@ -10,7 +10,7 @@
 
 # COMMAND ----------
 
-import dlt
+from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.types import *
 
@@ -23,7 +23,7 @@ VOLUME = spark.conf.get("volume_path")
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_ndc_products",
     comment="Raw FDA NDC product directory records",
     table_properties={"quality": "bronze"},
@@ -37,7 +37,7 @@ def raw_ndc_products():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_enforcement_actions",
     comment="Raw FDA food/supplement enforcement and recall records",
     table_properties={"quality": "bronze"},
@@ -51,7 +51,7 @@ def raw_enforcement_actions():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="raw_adverse_events",
     comment="Raw FDA drug adverse event reports",
     table_properties={"quality": "bronze"},
@@ -70,16 +70,16 @@ def raw_adverse_events():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="clean_products",
     comment="Cleaned product catalog with flattened ingredients and routes",
     table_properties={"quality": "silver"},
 )
-@dlt.expect_or_drop("has_ndc", "product_ndc IS NOT NULL")
-@dlt.expect("has_brand", "brand_name IS NOT NULL")
+@dp.expect_or_drop("has_ndc", "product_ndc IS NOT NULL")
+@dp.expect("has_brand", "brand_name IS NOT NULL")
 def clean_products():
     return (
-        dlt.read("raw_ndc_products")
+        spark.read.table("raw_ndc_products")
         .select(
             F.trim(F.col("product_ndc")).alias("product_ndc"),
             F.upper(F.trim(F.col("brand_name"))).alias("brand_name"),
@@ -98,16 +98,16 @@ def clean_products():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="clean_enforcement",
     comment="Cleaned enforcement actions with parsed dates and classification",
     table_properties={"quality": "silver"},
 )
-@dlt.expect_or_drop("has_recall_number", "recall_number IS NOT NULL")
-@dlt.expect("valid_classification", "classification IN ('Class I', 'Class II', 'Class III')")
+@dp.expect_or_drop("has_recall_number", "recall_number IS NOT NULL")
+@dp.expect("valid_classification", "classification IN ('Class I', 'Class II', 'Class III')")
 def clean_enforcement():
     return (
-        dlt.read("raw_enforcement_actions")
+        spark.read.table("raw_enforcement_actions")
         .select(
             F.trim(F.col("recall_number")).alias("recall_number"),
             F.col("classification"),
@@ -129,15 +129,15 @@ def clean_enforcement():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="clean_adverse_events",
     comment="Flattened adverse event reports with one row per drug-reaction pair",
     table_properties={"quality": "silver"},
 )
-@dlt.expect_or_drop("has_report_id", "report_id IS NOT NULL")
+@dp.expect_or_drop("has_report_id", "report_id IS NOT NULL")
 def clean_adverse_events():
     return (
-        dlt.read("raw_adverse_events")
+        spark.read.table("raw_adverse_events")
         .select(
             F.col("safetyreportid").alias("report_id"),
             F.col("serious").cast("int").alias("is_serious"),
@@ -163,7 +163,7 @@ def clean_adverse_events():
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="gold_product_catalog",
     comment="Deduplicated product reference table — Lakebase sync candidate (PK: product_ndc)",
     table_properties={
@@ -172,11 +172,11 @@ def clean_adverse_events():
     },
 )
 def gold_product_catalog():
-    return dlt.read("clean_products")
+    return spark.read.table("clean_products")
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="gold_enforcement_actions",
     comment="Clean enforcement/recall table for compliance monitoring (PK: recall_number)",
     table_properties={
@@ -185,11 +185,11 @@ def gold_product_catalog():
     },
 )
 def gold_enforcement_actions():
-    return dlt.read("clean_enforcement")
+    return spark.read.table("clean_enforcement")
 
 # COMMAND ----------
 
-@dlt.table(
+@dp.table(
     name="gold_adverse_events_summary",
     comment="Adverse event counts by product and reaction type",
     table_properties={
@@ -199,7 +199,7 @@ def gold_enforcement_actions():
 )
 def gold_adverse_events_summary():
     return (
-        dlt.read("clean_adverse_events")
+        spark.read.table("clean_adverse_events")
         .groupBy("product_name", "reaction_name")
         .agg(
             F.count("*").alias("event_count"),
