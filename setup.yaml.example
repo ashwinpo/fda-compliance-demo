@@ -1,5 +1,5 @@
 # ============================================================================
-# GNC FDA Compliance Demo — Setup Configuration
+# FDA Compliance Demo — Setup Configuration
 # ============================================================================
 # Copy this file to setup.yaml and fill in your values before running deploy.sh.
 # See README.md for setup instructions.
@@ -12,7 +12,7 @@ databricks_profile: "MY_PROFILE"
 
 # --- App Settings ---
 # Name for the Databricks App (lowercase, hyphens only)
-app_name: "gnc-fda-compliance"
+app_name: "fda-compliance"
 
 # --- SQL Warehouse ---
 # ID of a Serverless or Pro SQL warehouse (find in SQL Warehouses UI > Connection Details)

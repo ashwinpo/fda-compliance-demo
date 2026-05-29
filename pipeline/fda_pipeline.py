@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # GNC FDA Compliance — Data Pipeline
+# MAGIC # FDA Compliance — Declarative Pipeline
 # MAGIC
 # MAGIC Medallion pipeline ingesting openFDA data for regulatory compliance monitoring.
 # MAGIC

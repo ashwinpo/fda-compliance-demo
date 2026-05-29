@@ -2,12 +2,12 @@
 set -e
 
 # ============================================================================
-# GNC FDA Compliance Demo — Deploy Script
+# FDA Compliance Demo — Deploy Script
 # ============================================================================
 # Reads configuration from setup.yaml and deploys the full solution:
 #   1. Creates Unity Catalog resources (catalog, schema, volume)
 #   2. Fetches FDA data from the openFDA API and uploads to volume
-#   3. Creates and runs a DLT pipeline (bronze -> silver -> gold)
+#   3. Creates and runs a Declarative Pipeline (bronze -> silver -> gold)
 #   4. Deploys a Databricks App (compliance dashboard)
 #   5. Grants all required permissions
 #
@@ -29,13 +29,13 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: ./deploy.sh [OPTIONS]"
       echo ""
-      echo "Deploys the GNC FDA Compliance demo to a Databricks workspace."
+      echo "Deploys the FDA Compliance demo to a Databricks workspace."
       echo "Configuration is read from setup.yaml."
       echo ""
       echo "Options:"
       echo "  --setup-only      Generate config files without deploying"
       echo "  --skip-data       Skip FDA data fetch + upload (reuse existing data)"
-      echo "  --skip-pipeline   Skip DLT pipeline creation and run"
+      echo "  --skip-pipeline   Skip pipeline creation and run"
       echo "  -h, --help        Show this help message"
       exit 0
       ;;
@@ -87,8 +87,8 @@ if [ -n "$ERRORS" ]; then
 fi
 
 PROFILE="${CFG_DATABRICKS_PROFILE:-DEFAULT}"
-APP_NAME="${CFG_APP_NAME:-gnc-fda-compliance}"
-PIPELINE_NAME="GNC FDA Compliance Pipeline"
+APP_NAME="${CFG_APP_NAME:-fda-compliance}"
+PIPELINE_NAME="FDA Compliance Pipeline"
 VOLUME_PATH="/Volumes/${CFG_CATALOG}/${CFG_SCHEMA}/staging"
 
 # --- Test CLI auth ---
@@ -101,7 +101,7 @@ if [ -z "$WORKSPACE_USER" ]; then
   exit 1
 fi
 
-WORKSPACE_DIR="/Users/${WORKSPACE_USER}/gnc-fda-demo"
+WORKSPACE_DIR="/Users/${WORKSPACE_USER}/fda-compliance-demo"
 APP_FOLDER="/Workspace${WORKSPACE_DIR}/app"
 
 echo ""
@@ -178,7 +178,7 @@ echo ""
 # ============================================================================
 if [ "$SKIP_DATA" = "false" ]; then
   echo "--- Step 2: Fetching FDA data from openFDA API ---"
-  TMP_DATA="/tmp/gnc-fda-data"
+  TMP_DATA="/tmp/fda-demo-data"
   mkdir -p "$TMP_DATA"
   export FDA_API_KEY="${CFG_FDA_API_KEY}"
 
@@ -187,7 +187,7 @@ import requests, json, time, os, sys
 
 API_KEY = os.environ.get("FDA_API_KEY", "")
 BASE = "https://api.fda.gov"
-OUT = "/tmp/gnc-fda-data"
+OUT = "/tmp/fda-demo-data"
 
 def fetch(endpoint, params=None, limit=1000):
     results = []
@@ -244,8 +244,8 @@ fi
 # ============================================================================
 echo "--- Step 3: Uploading pipeline notebook ---"
 databricks workspace mkdirs "$WORKSPACE_DIR" --profile "$PROFILE" 2>/dev/null || true
-databricks workspace import "$WORKSPACE_DIR/gnc_fda_pipeline" \
-  --file "$SCRIPT_DIR/pipeline/gnc_fda_pipeline.py" \
+databricks workspace import "$WORKSPACE_DIR/fda_pipeline" \
+  --file "$SCRIPT_DIR/pipeline/fda_pipeline.py" \
   --format SOURCE --language PYTHON --overwrite \
   --profile "$PROFILE" \
   && echo "  + Pipeline notebook uploaded" || { echo "  x Failed to upload notebook"; exit 1; }
@@ -255,7 +255,7 @@ echo ""
 # Step 4: Create and run DLT pipeline
 # ============================================================================
 if [ "$SKIP_PIPELINE" = "false" ]; then
-  echo "--- Step 4: Running DLT pipeline ---"
+  echo "--- Step 4: Running Declarative Pipeline ---"
 
   # Check if pipeline already exists by name
   PIPELINE_ID=$(databricks pipelines list-pipelines --profile "$PROFILE" --output json 2>/dev/null \
@@ -280,7 +280,7 @@ for p in data:
     "volume_path": "$VOLUME_PATH"
   },
   "libraries": [
-    {"notebook": {"path": "$WORKSPACE_DIR/gnc_fda_pipeline"}}
+    {"notebook": {"path": "$WORKSPACE_DIR/fda_pipeline"}}
   ],
   "clusters": [
     {"label": "default", "num_workers": 0, "spark_conf": {"spark.master": "local[*]"}}
@@ -402,7 +402,7 @@ APP_EXISTS=$(databricks apps get "$APP_NAME" --profile "$PROFILE" 2>/dev/null &&
 
 if [ "$APP_EXISTS" = "no" ]; then
   echo "  Creating app '$APP_NAME'..."
-  databricks apps create --json "{\"name\":\"$APP_NAME\", \"description\":\"GNC FDA Compliance Monitor\"}" --profile "$PROFILE" > /dev/null 2>&1 \
+  databricks apps create --json "{\"name\":\"$APP_NAME\", \"description\":\"FDA Compliance Monitor\"}" --profile "$PROFILE" > /dev/null 2>&1 \
     || { echo "  x Failed to create app. The workspace may have hit the 300 app limit."; echo "    Delete a stopped app and re-run, or use: databricks apps list --profile $PROFILE"; exit 1; }
   echo "  + App created"
 

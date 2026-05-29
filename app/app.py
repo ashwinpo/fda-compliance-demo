@@ -6,13 +6,13 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.sql import StatementState
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("gnc-fda")
+logger = logging.getLogger("fda-compliance")
 
 WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
 CATALOG = os.environ.get("CATALOG", "main")
 SCHEMA = os.environ.get("SCHEMA", "fda_demo")
 
-app = FastAPI(title="GNC FDA Compliance Monitor")
+app = FastAPI(title="FDA Compliance Monitor")
 w = WorkspaceClient()
 
 
@@ -116,7 +116,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GNC FDA Compliance Monitor</title>
+<title>FDA Compliance Monitor</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -208,7 +208,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="header">
   <div class="header-icon">FDA</div>
   <div>
-    <h1>GNC FDA Compliance Monitor</h1>
+    <h1>FDA Compliance Monitor</h1>
   </div>
   <div class="subtitle">Powered by Databricks Lakehouse &rarr; Lakebase</div>
 </div>
