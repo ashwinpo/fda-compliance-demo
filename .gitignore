@@ -1,0 +1,32 @@
+# Generated config (user-specific values)
+setup.yaml
+app/app.yaml
+
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Databricks
+*.databricks/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Temp data
+/tmp-fda-data/

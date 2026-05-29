@@ -1,0 +1,30 @@
+# ============================================================================
+# GNC FDA Compliance Demo — Setup Configuration
+# ============================================================================
+# Copy this file to setup.yaml and fill in your values before running deploy.sh.
+# See README.md for setup instructions.
+# ============================================================================
+
+# --- Databricks CLI Profile ---
+# The name of your Databricks CLI profile (from ~/.databrickscfg)
+# Run: databricks auth login --host <your-workspace-url> --profile <name>
+databricks_profile: "MY_PROFILE"
+
+# --- App Settings ---
+# Name for the Databricks App (lowercase, hyphens only)
+app_name: "gnc-fda-compliance"
+
+# --- SQL Warehouse ---
+# ID of a Serverless or Pro SQL warehouse (find in SQL Warehouses UI > Connection Details)
+warehouse_id: ""
+
+# --- Unity Catalog Resources ---
+# The deploy script creates these if they don't exist.
+# Catalog must be one you have CREATE CATALOG on, or an existing catalog.
+catalog: "main"
+schema: "fda_demo"
+
+# --- openFDA API Key (Optional) ---
+# Increases rate limit from 40/min to 240/min. Leave empty to use without a key.
+# Get one at: https://open.fda.gov/apis/authentication/
+fda_api_key: ""
