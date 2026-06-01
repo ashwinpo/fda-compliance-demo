@@ -1,6 +1,6 @@
 # FDA Compliance Demo
 
-End-to-end Databricks demo: ingest FDA regulatory data through a medallion pipeline, serve it from Lakebase, and visualize it in a compliance dashboard — deployed with one command.
+End-to-end Databricks demo: ingest FDA regulatory data through a medallion pipeline, serve it from Lakebase, and visualize it in a compliance dashboard.
 
 ---
 
@@ -13,10 +13,10 @@ openFDA API --> UC Volume (raw JSON)
             --> Databricks App (compliance dashboard)
 ```
 
-1. **Ingest**: `deploy.sh` fetches 1,000 records each from three openFDA endpoints and uploads to a Unity Catalog volume.
+1. **Ingest**: Fetches 1,000 records each from three openFDA endpoints into a Unity Catalog volume.
 2. **Transform**: A Spark Declarative Pipeline reads raw JSON, flattens nested structures, applies quality expectations, and produces gold-layer analytics tables.
 3. **Serve**: Gold tables (with Change Data Feed enabled) can sync to Lakebase for low-latency operational queries.
-4. **Visualize**: A FastAPI app queries gold tables via the Statement Execution API and renders a dark-themed compliance dashboard.
+4. **Visualize**: A FastAPI app queries gold tables via the Statement Execution API and renders a compliance dashboard.
 
 ### Data Sources
 
@@ -29,67 +29,58 @@ openFDA API --> UC Volume (raw JSON)
 ### Pipeline Architecture
 
 - **Bronze**: Raw JSON records with ingestion metadata
-- **Silver**: Flattened structures, parsed dates, deduplication, quality expectations (`@dlt.expect_or_drop`)
+- **Silver**: Flattened structures, parsed dates, deduplication, quality expectations (`@dp.expect_or_drop`)
 - **Gold**: Aggregated analytics tables with CDF enabled for Lakebase sync
 
 ---
 
-## Prerequisites
+## Quick Start (No Local Tools Required)
 
-- **Databricks CLI** (v0.218+) — [Install docs](https://docs.databricks.com/dev-tools/cli/install.html)
-- **Python 3.8+** with `pyyaml` and `requests` — `pip install pyyaml requests`
-- A Databricks workspace with **Unity Catalog** and a **Serverless or Pro SQL Warehouse**
+### 1. Import the Repo
+
+In your Databricks workspace: **Repos > Add Repo** > paste:
+
+```
+https://github.com/ashwinpo/fda-compliance-demo
+```
+
+### 2. Open the Setup Notebook
+
+Open `setup` in the imported repo.
+
+### 3. Fill in the Widgets
+
+| Widget | Description |
+|---|---|
+| **Catalog** | Unity Catalog catalog to use (default: `main`) |
+| **SQL Warehouse ID** | Find in SQL Warehouses > Connection Details |
+| **Schema** | Schema name (default: `fda_demo`) |
+| **App Name** | App name (default: `fda-compliance`) |
+
+### 4. Run All
+
+Click **Run All**. The notebook will:
+1. Create Unity Catalog resources (schema, volume)
+2. Fetch live data from the openFDA API
+3. Run a Declarative Pipeline (bronze > silver > gold)
+4. Deploy a compliance dashboard app
+5. Grant all required permissions
+
+Total time: ~10 minutes. The final cell displays the app URL.
 
 ---
 
-## Quick Start
+## Alternative: CLI Deploy
 
-### 1. Authenticate with Databricks CLI
-
-```bash
-databricks auth login --host https://your-workspace.cloud.databricks.com --profile MY_PROFILE
-```
-
-### 2. Configure
+If you prefer deploying from your terminal (requires Databricks CLI + Python):
 
 ```bash
 cp setup.yaml.example setup.yaml
-# Edit setup.yaml with your workspace values
-```
-
-Key fields to set:
-- `databricks_profile` — your CLI profile name
-- `warehouse_id` — SQL Warehouse ID (find in SQL Warehouses UI > Connection Details)
-- `catalog` — Unity Catalog catalog to use (created if it doesn't exist)
-
-### 3. Deploy
-
-```bash
+# Edit setup.yaml with your values
 ./deploy.sh
 ```
 
-The script will:
-1. Create Unity Catalog resources (catalog, schema, volume)
-2. Fetch data from the openFDA API and upload to the volume
-3. Upload and run a Declarative Pipeline (bronze > silver > gold)
-4. Deploy a Databricks App with the compliance dashboard
-5. Grant all required permissions to the app's service principal
-
-### 4. Open the App
-
-The deploy script prints the app URL. Open it in your browser.
-
----
-
-## Deploy Flags
-
-```
-./deploy.sh                    # Full deploy (data + pipeline + app)
-./deploy.sh --skip-data        # Reuse existing data in volume
-./deploy.sh --skip-pipeline    # Skip pipeline run (tables must exist)
-./deploy.sh --skip-data --skip-pipeline  # App-only redeploy
-./deploy.sh --setup-only       # Validate config without deploying
-```
+See `deploy.sh --help` for flags like `--skip-data` and `--skip-pipeline`.
 
 ---
 
@@ -110,16 +101,18 @@ The gold tables have Change Data Feed enabled. To sync to Lakebase:
 ## Project Structure
 
 ```
-setup.yaml.example       # Config template — copy to setup.yaml
-deploy.sh                # One-command deploy script
+setup.py                 # One-click setup notebook (Run All — no local tools needed)
 
 pipeline/
   fda_pipeline.py        # Declarative Pipeline notebook (bronze > silver > gold)
+  fetch_fda_data.py      # Standalone data fetch notebook (used by setup.py)
 
 app/
   app.py                 # FastAPI dashboard (compliance monitor)
   requirements.txt       # Python dependencies
-  app.yaml               # Generated by deploy.sh (not checked in)
+
+deploy.sh                # CLI deploy script (alternative to setup notebook)
+setup.yaml.example       # CLI config template
 ```
 
 ---
@@ -128,14 +121,13 @@ app/
 
 To remove all resources created by this demo:
 
-```bash
-# Delete the app
-databricks apps delete fda-compliance --profile MY_PROFILE
+```sql
+-- Run in SQL Editor
+DROP SCHEMA <catalog>.<schema> CASCADE;
+```
 
-# Delete the pipeline (find ID first)
-databricks pipelines list-pipelines --profile MY_PROFILE | grep "FDA Compliance"
-databricks pipelines delete <pipeline-id> --profile MY_PROFILE
-
-# Drop the schema (removes all tables and volume)
-# Run in SQL Editor: DROP SCHEMA <catalog>.<schema> CASCADE
+```
+-- From the workspace UI or CLI
+-- Delete the app: Compute > Apps > fda-compliance > Delete
+-- Delete the pipeline: Workflows > Declarative Pipelines > FDA Compliance Pipeline > Delete
 ```
